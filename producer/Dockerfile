@@ -6,4 +6,4 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY ./ ./
-ENTRYPOINT [ "/kafka-producer.py" ]
+CMD [ "python3", "kafka-producer.py" ]
