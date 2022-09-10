@@ -65,12 +65,12 @@ services:
     build:
       context: producer/
       dockerfile: ./Dockerfile
-    image: producerk
+    image: producer_instap
     depends_on:
       - broker
       - zookeeper
       - kafka-ui
-    container_name: kafkaProducer
+    container_name: instapProducer
     env_file:
       - ./producer/credentials.env
 
@@ -78,12 +78,21 @@ services:
     build:
       context: consumer/
       dockerfile: ./Dockerfile
-    image: consumerk
+    image: consumer_instap
     depends_on:
       - broker
       - zookeeper
       - kafka-ui
-    container_name: kafkaConsumer
+    container_name: instapConsumer
 
-
+  logstash:
+    build: 
+      context: logstash/
+      dockerfile: ./Dockerfile
+    image: logstash_instap
+    container_name: logstash
+    ports:
+      - "9600:9600"
+    depends_on: 
+      - broker
 
