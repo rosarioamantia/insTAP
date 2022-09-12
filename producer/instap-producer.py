@@ -10,7 +10,7 @@ COMMENTS_LIMIT = os.getenv("COMMENTS_LIMIT", 10)
 USER_TEST = os.getenv("USER_TEST","<user_here>")
 PASS_TEST = os.getenv("PASS_TEST","<pass_here>")
 USER_TO_WATCH = os.getenv("USER_TO_WATCH", "chiaraferragni")
-LOGSTASH_URL = "http://logstash:9600"
+LOGSTASH_URL = "http://logstash:9700"
 PROJEJCT_ID = 'instap_id'
 
 insta = instaloader.Instaloader()

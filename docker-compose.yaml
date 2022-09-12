@@ -14,6 +14,7 @@ services:
   broker:
     image: confluentinc/cp-kafka:7.0.1
     container_name: broker
+    hostname: broker
     ports:
       - "9092:9092"
     depends_on:
@@ -21,8 +22,7 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://broker:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
@@ -70,7 +70,8 @@ services:
       - broker
       - zookeeper
       - kafka-ui
-    container_name: instapProducer
+      - logstash
+    container_name: producer
     env_file:
       - ./producer/credentials.env
 
@@ -83,7 +84,7 @@ services:
       - broker
       - zookeeper
       - kafka-ui
-    container_name: instapConsumer
+    container_name: consumer
 
   logstash:
     build: 
@@ -93,6 +94,10 @@ services:
     container_name: logstash
     ports:
       - "9600:9600"
+      - "9700:9700"
+    expose:
+      - "9600"
+      - "9700"
     depends_on: 
       - broker
 
