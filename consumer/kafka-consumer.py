@@ -6,7 +6,7 @@ topic = os.getenv("KAFKA_TOPIC", "instap")
 group_id = os.getenv("GROUP_ID", "my-group")
 consumer = KafkaConsumer(
      topic,
-     bootstrap_servers=['broker:29092'],
+     bootstrap_servers=['broker:9092'],
      auto_offset_reset='latest',
      enable_auto_commit=True,
      api_version=(0, 10, 1),
