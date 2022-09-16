@@ -17,5 +17,16 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from translate import Translator
 import time
 
-time.sleep(500)
+
 print("OKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKkkkk")
+spark = SparkSession.builder.appName("APP_NAME").getOrCreate()
+spark.sparkContext.setLogLevel("ERROR")
+
+df = spark.createDataFrame([
+    Row(a=1, b=2.),
+    Row(a=2, b=3),
+    Row(a=4, b=5)
+])
+
+print(type(df))
+print(df)
