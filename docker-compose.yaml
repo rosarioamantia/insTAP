@@ -99,4 +99,27 @@ services:
       - broker
       - zookeeper
       - kafka-ui
+  
+  elastic_search:
+        build:
+            context: ./elasticsearch
+            dockerfile: Dockerfile
+        image: am:elastic_search
+        container_name: elastic_search_AM
+        networks: 
+            tap:
+                ipv4_address: 10.0.100.51
+        ports:
+            - 9200:9200
+        environment:
+            discovery.type: single-node
+            ES_JAVA_OPTS: -Xms2g -Xmx2g
+
+networks: 
+    tap:
+        name: tap
+        driver: bridge
+        ipam:
+            config:
+                - subnet: 10.0.100.1/24
 
