@@ -1,5 +1,6 @@
 from os import truncate
 from urllib import response
+from xml.dom.minidom import Document
 import pyspark
 from pyspark import SparkContext
 from pyspark.sql.session import SparkSession
@@ -29,6 +30,7 @@ translator = Translator(from_lang = "it", to_lang="en")
 
 def get_spark_session():
     spark_conf = SparkConf().set('es.nodes', 'elastic_search_AM').set('es.port', '9200')
+    #spark_conf.set("es.index.auto.create", "true")
     spark_context = SparkContext(appName = 'insTAP', conf = spark_conf)
     spark_session = SparkSession(spark_context)
     return spark_session
@@ -51,13 +53,48 @@ def get_sentiment(text, daily_limit_passed = False):
         value = value['compound']
         return value
 
+schema = tp.StructType([
+    tp.StructField("user", tp.StringType(), False),
+    tp.StructField("caption", tp.StringType(), False)
+])
+
+es_mapping = {
+    "mappings": {
+        "properties": {
+            "user":    {"type": "keyword"},
+            "caption":     {"type": "keyword"},
+        }
+    }
+}
+
 topic = "instap"
 spark = get_spark_session()
 
-df=spark.readStream.format('kafka').option('kafka.bootstrap.servers', "http://localhost:9092").option('subscribe', 'instap').option("startingOffsets","earliest").load()
-#df.selectExpr("CAST(value AS STRING)")
+df = spark.readStream.format('kafka') \
+    .option('kafka.bootstrap.servers', "broker:9092") \
+        .option('subscribe', topic). \
+            option("startingOffsets","earliest").load()
+
+
+df = df.selectExpr("CAST(value AS STRING)") \
+    .select(from_json("value", schema=schema).alias("data")) \
+        .select("data.*")
 
 print("-----------------------------------------------------------------------------------------------------")
-print(df.schema())
+print(df.printSchema())
 print("-----------------------------------------------------------------------------------------------------")
 
+elastic_host = "http://10.0.100.51:9200"
+
+es = Elasticsearch(
+    elastic_host,
+    verify_certs=False
+)
+
+query=df.writeStream \
+        .option("checkpointLocation", "./checkpoints") \
+        .format("es") \
+        .start("elastic_index" + "/_doc")\
+        #.show()
+        #.show()
+query.awaitTermination()

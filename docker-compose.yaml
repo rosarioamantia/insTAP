@@ -104,10 +104,14 @@ services:
     build:
         context: ./elasticsearch
         dockerfile: Dockerfile
-    image: am:elastic_search
+    image: am:elastic_search_AM
+    networks:
+      tapp:
+        ipv4_address: 10.0.100.51
+
     container_name: elastic_search_AM
     ports:
-        - 9200:9200
+        - "9200:9200"
     environment:
         discovery.type: single-node
         ES_JAVA_OPTS: -Xms2g -Xmx2g
@@ -115,11 +119,28 @@ services:
       - broker
       - zookeeper
       - kafka-ui
+  kibana:
+        build:
+            context: ./kibana
+            dockerfile: Dockerfile
+        image: am:kibana
+        container_name: kibana_AM
+        networks: 
+            tapp:
+                ipv4_address: 10.0.100.52
+        ports:
+            - "5601:5601"
+        volumes:
+            - myapp:/usr/share/kibana/src/core/server/core_app/assets/favicons
+
+volumes:
+    myapp:
+
 networks: 
-  tap:
-      name: tap
-      driver: bridge
-      ipam:
-          config:
-              - subnet: 10.0.100.1/24
+  tapp:
+    name: tapp
+    driver: bridge
+    ipam:
+        config:
+            - subnet: 10.0.100.1/24
 

@@ -30,11 +30,10 @@ for i, post in enumerate(posts):
         comments_to_send.append(comment.text)
 
     data = {
-        'id': i,
+        #'id': i,
+        #'user': USER_TO_WATCH,
         'user': USER_TO_WATCH,
-        'comments': ", ".join(comments_to_send),
-        'caption': post_caption,
-        'pic_url': post_image_url
+        'caption': post_caption
     }
     print(str(data))
     x = requests.post(LOGSTASH_URL, json=data, timeout=5)
