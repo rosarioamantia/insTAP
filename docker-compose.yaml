@@ -3,7 +3,7 @@
 version: '3'
 services:
 
-  zookeeper:
+zookeeper:
     image: confluentinc/cp-zookeeper:7.0.1
     container_name: zookeeper
     environment:
@@ -99,39 +99,43 @@ services:
       - broker
       - zookeeper
       - kafka-ui
-  
-  elastic_search:
+
+  elasticsearch:
     build:
         context: ./elasticsearch
         dockerfile: Dockerfile
-    image: am:elastic_search_AM
+    image: instap:elasticsearch_INSTAP
     networks:
       tapp:
         ipv4_address: 10.0.100.51
 
-    container_name: elastic_search_AM
+    container_name: elasticsearch_INSTAP
     ports:
         - "9200:9200"
     environment:
+        node.name: elasticsearch
         discovery.type: single-node
         ES_JAVA_OPTS: -Xms2g -Xmx2g
-    depends_on: 
-      - broker
-      - zookeeper
-      - kafka-ui
+        xpack.security.enabled: false
+        xpack.security.enrollment.enabled: false
+        bootstrap.memory_lock: true
+
   kibana:
-        build:
-            context: ./kibana
-            dockerfile: Dockerfile
-        image: am:kibana
-        container_name: kibana_AM
-        networks: 
-            tapp:
-                ipv4_address: 10.0.100.52
-        ports:
-            - "5601:5601"
-        volumes:
-            - myapp:/usr/share/kibana/src/core/server/core_app/assets/favicons
+    build:
+      context: ./kibana
+      dockerfile: Dockerfile
+    image: instap:kibana
+    container_name: kibana
+    hostname: kibana
+    ports:
+      - 5601:5601
+    networks:
+      tapp:
+        ipv4_address: 10.0.100.52
+    environment:
+        xpack.security.enabled: false
+    depends_on:
+      - elasticsearch
 
 volumes:
     myapp:
@@ -143,4 +147,3 @@ networks:
     ipam:
         config:
             - subnet: 10.0.100.1/24
-

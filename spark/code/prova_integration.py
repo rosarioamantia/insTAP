@@ -29,7 +29,9 @@ translator = Translator(from_lang = "it", to_lang="en")
 
 
 def get_spark_session():
-    spark_conf = SparkConf().set('es.nodes', 'elastic_search_AM').set('es.port', '9200')
+    spark_conf = SparkConf()\
+        .set('es.nodes', 'elastic_search_AM')\
+            .set('es.port', '9200')
     #spark_conf.set("es.index.auto.create", "true")
     spark_context = SparkContext(appName = 'insTAP', conf = spark_conf)
     spark_session = SparkSession(spark_context)
@@ -59,11 +61,10 @@ schema = tp.StructType([
 ])
 
 es_mapping = {
-    "mappings": {
-        "properties": {
-            "user":    {"type": "keyword"},
-            "caption":     {"type": "keyword"},
-        }
+    "properties": {
+        "user":    {"type": "keyword"},
+        "caption":     {"type": "integer"},
+        "haha":     {"type": "keyword"}
     }
 }
 
@@ -77,24 +78,31 @@ df = spark.readStream.format('kafka') \
 
 
 df = df.selectExpr("CAST(value AS STRING)") \
-    .select(from_json("value", schema=schema).alias("data")) \
+    .select(from_json("value", schema).alias("data")) \
         .select("data.*")
+        
+
+elastic_host = "http://elastic_search:9200"
+es = Elasticsearch(hosts=elastic_host, verify_certs = False)
+
+dict = {
+  "ciao": "Ford",
+  "ciau": "Mustang",
+  "year": 1964
+}
 
 print("-----------------------------------------------------------------------------------------------------")
-print(df.printSchema())
+resp = es.index(index="instap", id=id, document=dict)
+print(es.get(index="instap", id=id))
+
+
 print("-----------------------------------------------------------------------------------------------------")
 
-elastic_host = "http://10.0.100.51:9200"
 
-es = Elasticsearch(
-    elastic_host,
-    verify_certs=False
-)
+'''
+print("-----------------------------------------------------------------------------------------------------")
+resp = es.index(index="test-index", id=1, document=dict)
+print(resp['result'])
+print("-----------------------------------------------------------------------------------------------------")
+'''
 
-query=df.writeStream \
-        .option("checkpointLocation", "./checkpoints") \
-        .format("es") \
-        .start("elastic_index" + "/_doc")\
-        #.show()
-        #.show()
-query.awaitTermination()
