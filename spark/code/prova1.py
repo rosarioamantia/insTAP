@@ -1,32 +1,124 @@
 from os import truncate
+from urllib import response
+from xml.dom.minidom import Document
 import pyspark
+from pyspark.sql.dataframe import DataFrame
 from pyspark import SparkContext
 from pyspark.sql.session import SparkSession
 from pyspark.streaming import StreamingContext
 import pyspark.sql.types as tp
 from pyspark.ml import Pipeline
+from pyspark.conf import SparkConf  
 from pyspark.ml.feature import StringIndexer, VectorAssembler
 from pyspark.ml.feature import StopWordsRemover, Word2Vec, RegexTokenizer
 from pyspark.ml.classification import LogisticRegression
 from pyspark.sql import Row
+from pyspark.sql.functions import from_json
 from pyspark.ml.feature import HashingTF, IDF, Tokenizer
 from pyspark.ml.classification import NaiveBayes
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.sql import SparkSession
+from elasticsearch import Elasticsearch
+import pandas as pd
+from pyspark.sql.functions import udf
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from translate import Translator
 import time
+import json
+
+vader = SentimentIntensityAnalyzer()
+translator = Translator(from_lang = "it", to_lang="en")
 
 
-print("OKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKkkkk")
-spark = SparkSession.builder.appName("APP_NAME").getOrCreate()
-spark.sparkContext.setLogLevel("ERROR")
+def get_spark_session():
+    spark_conf = SparkConf()\
+        .set('es.nodes', 'elasticsearch_INSTAP')\
+            .set('es.port', '9200')
+    #spark_conf.set("es.index.auto.create", "true")
+    spark_context = SparkContext(appName = 'insTAP', conf = spark_conf)
+    spark_context.setLogLevel("WARN")
+    spark_session = SparkSession(spark_context)
+    return spark_session
+    
 
-df = spark.createDataFrame([
-    Row(a=1, b=2.),
-    Row(a=2, b=3),
-    Row(a=4, b=5)
+def get_sentiment(text, daily_limit_passed = False):
+    if not daily_limit_passed:
+        print("traduco: ")
+        print(translator.translate(text))
+
+        value = vader.polarity_scores(translator.translate(text))
+        value = value['compound']
+
+        # 1) positive sentiment: compound score >= 0.05
+        # 2) neutral sentiment: (compound score > -0.05) and (compound score < 0.05)
+        # 3) negative sentiment: compound score <= -0.05
+        return value
+    else:
+        value = vader.polarity_scores(text)
+        value = value['compound']
+        return value
+
+schema = tp.StructType([
+    tp.StructField("user", tp.StringType(), False),
+    tp.StructField("caption", tp.StringType(), False)
 ])
 
-print(type(df))
-print(df)
+es_mapping = {
+    "mappings": {
+        "properties": {
+            "user":    {"type": "keyword"},
+            "caption":     {"type": "integer"}
+        }
+    }
+}
+
+topic = "instap"
+spark = get_spark_session()
+
+df = spark.readStream.format('kafka') \
+    .option('kafka.bootstrap.servers', "broker:29092") \
+        .option('subscribe', topic). \
+            option("startingOffsets","earliest").load()
+          
+
+
+
+elastic_host = "http://elasticsearch:9200"
+es = Elasticsearch(hosts=elastic_host, verify_certs = False)
+response = es.indices.create(
+    index="akaki", 
+    body=es_mapping, 
+    ignore=400
+)
+
+if 'acknowledged' in response:
+    if response['acknowledged'] == True:
+        print("Successfully created index:", response['index'])
+
+##Con solo cast as string funziona
+df=df.selectExpr("CAST(value as STRING)") \
+    .select(from_json("value",schema=schema).alias("data"))\
+    .select("data.*") \
+      #.alias("data"))\
+     #\
+
+print("________________________________")
+print("________________________________")
+#print(df.show())
+print("________________________________")
+
+
+def splitting(x):
+    return x.split(" ")
+
+#pprint(df)
+#print(df.describe())
+#print(df.show())
+
+query=df.writeStream.option("checkpointLocation", "./checkpoints").format("es").start("akaki")
+        #.show()
+        #.show()
+query.awaitTermination()
+
+
+

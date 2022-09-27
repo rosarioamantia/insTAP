@@ -2,6 +2,7 @@ from os import truncate
 from urllib import response
 from xml.dom.minidom import Document
 import pyspark
+from pyspark.sql.dataframe import DataFrame
 from pyspark import SparkContext
 from pyspark.sql.session import SparkSession
 from pyspark.streaming import StreamingContext
@@ -18,6 +19,7 @@ from pyspark.ml.classification import NaiveBayes
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.sql import SparkSession
 from elasticsearch import Elasticsearch
+import pandas as pd
 from pyspark.sql.functions import udf
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from translate import Translator
@@ -30,10 +32,11 @@ translator = Translator(from_lang = "it", to_lang="en")
 
 def get_spark_session():
     spark_conf = SparkConf()\
-        .set('es.nodes', 'elastic_search_AM')\
+        .set('es.nodes', 'elasticsearch_INSTAP')\
             .set('es.port', '9200')
     #spark_conf.set("es.index.auto.create", "true")
     spark_context = SparkContext(appName = 'insTAP', conf = spark_conf)
+    spark_context.setLogLevel("WARN")
     spark_session = SparkSession(spark_context)
     return spark_session
     
@@ -61,48 +64,53 @@ schema = tp.StructType([
 ])
 
 es_mapping = {
-    "properties": {
-        "user":    {"type": "keyword"},
-        "caption":     {"type": "integer"},
-        "haha":     {"type": "keyword"}
-    }
+    "user":    {"type": "keyword"},
+    "caption":     {"type": "integer"}
 }
 
 topic = "instap"
 spark = get_spark_session()
 
 df = spark.readStream.format('kafka') \
-    .option('kafka.bootstrap.servers', "broker:9092") \
+    .option('kafka.bootstrap.servers', "broker:29092") \
         .option('subscribe', topic). \
             option("startingOffsets","earliest").load()
+            
 
 
-df = df.selectExpr("CAST(value AS STRING)") \
-    .select(from_json("value", schema).alias("data")) \
-        .select("data.*")
-        
-
-elastic_host = "http://elastic_search:9200"
-es = Elasticsearch(hosts=elastic_host, verify_certs = False)
 
 dict = {
   "ciao": "Ford",
   "ciau": "Mustang",
   "year": 1964
 }
+#resp = es.index(index="nuovaholla", document=dict)
+#resp = es.indices.create(index="abdul", mappings = es_mapping, ignore = 400)
 
-print("-----------------------------------------------------------------------------------------------------")
-resp = es.index(index="instap", id=id, document=dict)
-print(es.get(index="instap", id=id))
+df = df.selectExpr("CAST(value AS STRING)") \
+.select(from_json("value", schema=schema).alias("data")) \
+.select("data.*")
+
+elastic_host = "http://elasticsearch:9200"
+es = Elasticsearch(hosts=elastic_host, verify_certs = False)
+
+def fun(data_row, batch_id):
+    print(data_row.show())
+    print(batch_id)
+    print("FLAG1")
+    if(data_row.count() > 0):
+        print("DATA RECEIVED FROM KAFKA")
 
 
-print("-----------------------------------------------------------------------------------------------------")
-
-
+print("ciao")
+query  = df.writeStream.option("checkpointLocation", "./checkpoints").foreachBatch(fun).start().awaitTermination()
 '''
-print("-----------------------------------------------------------------------------------------------------")
-resp = es.index(index="test-index", id=1, document=dict)
-print(resp['result'])
-print("-----------------------------------------------------------------------------------------------------")
 '''
+#df.writeStream.option("checkpointLocation", "./checkpoints").format("es").start("abdul").awaitTermination()
+#resp = es.index(index = "elastic_indexxxxxxxxxxxxxxxxxxxxxxx", document=dict)
+
+#df.writeStream.option("checkpointLocation", "./checkpoints").foreach(fun).start().awaitTermination()
+print("ciao")
+
+
 
