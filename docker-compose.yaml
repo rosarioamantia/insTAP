@@ -3,12 +3,14 @@
 version: '3'
 services:
 
-zookeeper:
+  zookeeper:
     image: confluentinc/cp-zookeeper:7.0.1
     container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - tapp
 
 
   broker:
@@ -22,10 +24,12 @@ zookeeper:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_INTERNAL://broker:29092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    networks:
+      - tapp
 
 
   kafka-ui:
@@ -50,6 +54,8 @@ zookeeper:
       - zookeeper
       - kafka-ui
     entrypoint: [ '/bin/sh', '-c' ]
+    networks:
+      - tapp
     command: |
       "
       # blocks until kafka is reachable
@@ -81,6 +87,8 @@ zookeeper:
       - broker
       - zookeeper
       - kafka-ui
+    networks:
+      - tapp
     container_name: consumer
 
   logstash:
@@ -99,11 +107,13 @@ zookeeper:
       - broker
       - zookeeper
       - kafka-ui
+    networks:
+      - tapp
 
   elasticsearch:
     build:
-        context: ./elasticsearch
-        dockerfile: Dockerfile
+      context: ./elasticsearch
+      dockerfile: Dockerfile
     image: instap:elasticsearch_INSTAP
     networks:
       tapp:
@@ -113,12 +123,12 @@ zookeeper:
     ports:
         - "9200:9200"
     environment:
-        node.name: elasticsearch
-        discovery.type: single-node
-        ES_JAVA_OPTS: -Xms2g -Xmx2g
-        xpack.security.enabled: false
-        xpack.security.enrollment.enabled: false
-        bootstrap.memory_lock: true
+      node.name: elasticsearch
+      discovery.type: single-node
+      ES_JAVA_OPTS: -Xms2g -Xmx2g
+      xpack.security.enabled: "false"
+      xpack.security.enrollment.enabled: "false"
+      bootstrap.memory_lock: "true"
 
   kibana:
     build:
@@ -133,7 +143,7 @@ zookeeper:
       tapp:
         ipv4_address: 10.0.100.52
     environment:
-        xpack.security.enabled: false
+        xpack.security.enabled: "false"
     depends_on:
       - elasticsearch
 
