@@ -44,7 +44,8 @@ from json import dumps
 from time import sleep
 
 import instaloader
-from kafka import KafkaProducer
+import requests
+
 
 TOPIC = os.getenv("KAFKA_TOPIC", "instap")
 #POSTS_LIMIT = os.getenv( "POSTS_LIMIT", 10)
@@ -53,16 +54,15 @@ TOPIC = os.getenv("KAFKA_TOPIC", "instap")
 #PASS_TEST = os.getenv("PASS_TEST","Ciao12345")
 #USER_TO_WATCH = os.getenv("USER_TO_WATCH", "chiaraferragni")
 
+LOGSTASH_URL = "http://logstash:9700"
+PROJEJCT_ID = 'instap_id'
 
-producer = KafkaProducer(bootstrap_servers=['broker:9092'],
-                         value_serializer=lambda x:
-                         dumps(x).encode('utf-8'))
 #insta = instaloader.Instaloader()
 #insta.login(USER_TEST, PASS_TEST)
 
 i = 0
 while i < 1000000000:
     data = {'user': "ciao", 'id': i}
-    producer.send(TOPIC, value=data)
+    x = requests.post(LOGSTASH_URL, json=data, timeout=5)
     sleep(5)
     i+=1
