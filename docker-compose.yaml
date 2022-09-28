@@ -44,7 +44,7 @@ services:
 
 
   init-kafka:
-    image: confluentinc/cp-kafka:6.1.1
+    image: confluentinc/cp-kafka:7.0.1
     depends_on:
       - broker
       - zookeeper
@@ -67,7 +67,7 @@ services:
       dockerfile: ./Dockerfile
     image: producer_instap
     depends_on:
-      - logstash
+      - broker
     container_name: producer
     env_file:
       - ./producer/credentials.env
@@ -82,21 +82,3 @@ services:
       - zookeeper
       - kafka-ui
     container_name: consumer
-
-  logstash:
-    build: 
-      context: logstash/
-      dockerfile: ./Dockerfile
-    image: logstash_instap
-    container_name: logstash
-    ports:
-      - "9600:9600"
-      - "9700:9700"
-    expose:
-      - "9600"
-      - "9700"
-    depends_on: 
-      - broker
-      - zookeeper
-      - kafka-ui
-
