@@ -4,7 +4,7 @@ version: '3'
 services:
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.0.1
+    image: confluentinc/cp-zookeeper:6.1.1
     container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
@@ -14,7 +14,7 @@ services:
 
 
   broker:
-    image: confluentinc/cp-kafka:7.0.1
+    image: confluentinc/cp-kafka:6.1.1
     container_name: broker
     hostname: broker
     ports:
@@ -24,7 +24,7 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_INTERNAL://broker:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
@@ -33,7 +33,7 @@ services:
 
 
   kafka-ui:
-    image: provectuslabs/kafka-ui
+    image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
     depends_on:
       - zookeeper
@@ -45,6 +45,8 @@ services:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker:9092
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - tapp
 
 
   init-kafka:
@@ -54,8 +56,6 @@ services:
       - zookeeper
       - kafka-ui
     entrypoint: [ '/bin/sh', '-c' ]
-    networks:
-      - tapp
     command: |
       "
       # blocks until kafka is reachable
@@ -67,6 +67,9 @@ services:
       echo -e 'Successfully created the following topics:'
       kafka-topics --bootstrap-server broker:29092 --list
       "
+    networks:
+      - tapp
+
   producer:
     build:
       context: producer/
@@ -77,6 +80,8 @@ services:
     container_name: producer
     env_file:
       - ./producer/credentials.env
+    networks:
+      - tapp
 
   consumer:
     build:
@@ -87,9 +92,9 @@ services:
       - broker
       - zookeeper
       - kafka-ui
+    container_name: consumer
     networks:
       - tapp
-    container_name: consumer
 
   logstash:
     build: 
