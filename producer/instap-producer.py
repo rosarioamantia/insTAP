@@ -62,7 +62,7 @@ PROJEJCT_ID = 'instap_id'
 
 i = 0
 while i < 1000000000:
-    data = {'user': "ciao", 'id': i}
+    data = {'user': "ciao", 'caption': i}
     x = requests.post(LOGSTASH_URL, json=data, timeout=5)
     sleep(5)
     i+=1

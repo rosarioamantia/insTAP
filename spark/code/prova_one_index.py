@@ -72,14 +72,14 @@ topic = "instap"
 spark = get_spark_session()
 
 df = spark.readStream.format('kafka') \
-    .option('kafka.bootstrap.servers', "broker:29092") \
+    .option('kafka.bootstrap.servers', "broker:9092") \
         .option('subscribe', topic). \
             option("startingOffsets","earliest").load()
             
 
 
 
-dict = {
+dict_prova = {
   "ciao": "Ford",
   "ciau": "Mustang",
   "year": 1964
@@ -94,23 +94,24 @@ df = df.selectExpr("CAST(value AS STRING)") \
 elastic_host = "http://elasticsearch:9200"
 es = Elasticsearch(hosts=elastic_host, verify_certs = False)
 
-def fun(data_row, batch_id):
+def elaborate(data_row):
+    es.index(index = "mytry", document = data_row.asDict())
+    print("1________________________________________")
     print(data_row.show())
-    print(batch_id)
-    print("FLAG1")
+    print("2________________________________________")
+    #print(batch_id)
+    print("3________________________________________")
     if(data_row.count() > 0):
         print("DATA RECEIVED FROM KAFKA")
 
 
 print("ciao")
-query  = df.writeStream.option("checkpointLocation", "./checkpoints").foreachBatch(fun).start().awaitTermination()
-'''
-'''
-#df.writeStream.option("checkpointLocation", "./checkpoints").format("es").start("abdul").awaitTermination()
+#query  = df.writeStream.option("checkpointLocation", "./checkpoints").foreach(fun).start().awaitTermination()
+
+df.writeStream.option("checkpointLocation", "./checkpoints").format("es").start("mymytryyyyyyyyyyyyyyyyyyyyyy").awaitTermination()
 #resp = es.index(index = "elastic_indexxxxxxxxxxxxxxxxxxxxxxx", document=dict)
 
 #df.writeStream.option("checkpointLocation", "./checkpoints").foreach(fun).start().awaitTermination()
-print("ciao")
 
 
 
