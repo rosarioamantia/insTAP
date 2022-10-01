@@ -1,4 +1,4 @@
-'''import os
+import os
 from json import dumps
 from time import sleep
 import requests
@@ -33,13 +33,13 @@ for i, post in enumerate(posts):
         'id': i,
         'user': USER_TO_WATCH,
         'comments': ", ".join(comments_to_send),
-        'caption': post_caption,
-        'pic_url': post_image_url
+        'caption': post_caption
     }
+        #'pic_url': post_image_url
     print(str(data))
-    x = requests.post(LOGSTASH_URL, json=data, timeout=5)'''
+    x = requests.post(LOGSTASH_URL, json=data, timeout=5)
 
-import os
+'''import os
 from json import dumps
 from time import sleep
 
@@ -62,7 +62,7 @@ PROJEJCT_ID = 'instap_id'
 
 i = 0
 while i < 1000000000:
-    data = {'user': "ciao", 'caption': i}
+    sleep(10)
+    data = {'user': "it' a good day, good time, beautiful", 'caption': i}
     x = requests.post(LOGSTASH_URL, json=data, timeout=5)
-    sleep(5)
-    i+=1
+    i+=1'''

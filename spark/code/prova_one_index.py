@@ -8,19 +8,20 @@ from pyspark.sql.session import SparkSession
 from pyspark.streaming import StreamingContext
 import pyspark.sql.types as tp
 from pyspark.ml import Pipeline
-from pyspark.conf import SparkConf  
+from pyspark.conf import SparkConf
 from pyspark.ml.feature import StringIndexer, VectorAssembler
 from pyspark.ml.feature import StopWordsRemover, Word2Vec, RegexTokenizer
 from pyspark.ml.classification import LogisticRegression
 from pyspark.sql import Row
-from pyspark.sql.functions import from_json
+from pyspark.sql.functions import from_json, lit, col
 from pyspark.ml.feature import HashingTF, IDF, Tokenizer
 from pyspark.ml.classification import NaiveBayes
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.sql import SparkSession
 from elasticsearch import Elasticsearch
-import pandas as pd
+import pandas as pds
 from pyspark.sql.functions import udf
+from pyspark.sql.types  import DoubleType
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from translate import Translator
 import time
@@ -41,7 +42,7 @@ def get_spark_session():
     return spark_session
     
 
-def get_sentiment(text, daily_limit_passed = False):
+def get_sentiment(text, daily_limit_passed = True):
     if not daily_limit_passed:
         print("traduco: ")
         print(translator.translate(text))
@@ -59,13 +60,21 @@ def get_sentiment(text, daily_limit_passed = False):
         return value
 
 schema = tp.StructType([
+    tp.StructField("id", tp.IntegerType(), False),
     tp.StructField("user", tp.StringType(), False),
+    tp.StructField("comments", tp.StringType(), False),
     tp.StructField("caption", tp.StringType(), False)
 ])
 
 es_mapping = {
-    "user":    {"type": "keyword"},
-    "caption":     {"type": "integer"}
+    "mappings": {
+        "properties": {
+            "id":    {"type": "integer"},
+            "user":     {"type": "keyword"},
+            "comments":{"type":"keyword"},
+            "caption":{"type":"keyword"}   
+        }
+    }
 }
 
 topic = "instap"
@@ -74,18 +83,8 @@ spark = get_spark_session()
 df = spark.readStream.format('kafka') \
     .option('kafka.bootstrap.servers', "broker:9092") \
         .option('subscribe', topic). \
-            option("startingOffsets","earliest").load()
-            
+            option("startingOffsets","earliest").load()            
 
-
-
-dict_prova = {
-  "ciao": "Ford",
-  "ciau": "Mustang",
-  "year": 1964
-}
-#resp = es.index(index="nuovaholla", document=dict)
-#resp = es.indices.create(index="abdul", mappings = es_mapping, ignore = 400)
 
 df = df.selectExpr("CAST(value AS STRING)") \
 .select(from_json("value", schema=schema).alias("data")) \
@@ -94,24 +93,16 @@ df = df.selectExpr("CAST(value AS STRING)") \
 elastic_host = "http://elasticsearch:9200"
 es = Elasticsearch(hosts=elastic_host, verify_certs = False)
 
-def elaborate(data_row):
-    es.index(index = "mytry", document = data_row.asDict())
-    print("1________________________________________")
-    print(data_row.show())
-    print("2________________________________________")
-    #print(batch_id)
-    print("3________________________________________")
-    if(data_row.count() > 0):
-        print("DATA RECEIVED FROM KAFKA")
 
+response = es.indices.create(index="instap_index", mappings = es_mapping, ignore = 400)
 
-print("ciao")
-#query  = df.writeStream.option("checkpointLocation", "./checkpoints").foreach(fun).start().awaitTermination()
+if 'acknowledged' in response:
+    if response['acknowledged'] == True:
+        print("Successfully created index:", response['index'])
 
-df.writeStream.option("checkpointLocation", "./checkpoints").format("es").start("mymytryyyyyyyyyyyyyyyyyyyyyy").awaitTermination()
-#resp = es.index(index = "elastic_indexxxxxxxxxxxxxxxxxxxxxxx", document=dict)
-
-#df.writeStream.option("checkpointLocation", "./checkpoints").foreach(fun).start().awaitTermination()
+sentiment_udf = udf(get_sentiment, DoubleType())
+df=df.withColumn("sentiment_result", sentiment_udf(col("user")))
+df.writeStream.option("checkpointLocation", "./checkpoints").format("es").start("instap_index").awaitTermination()
 
 
 
