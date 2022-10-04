@@ -19,6 +19,7 @@ insta = instaloader.Instaloader()
 insta.login(USER_TEST, PASS_TEST)
 
 posts = instaloader.Profile.from_username(insta.context, USER_TO_WATCH).get_posts()
+
 for i, post in enumerate(posts):
     if i == POSTS_LIMIT:
         break
