@@ -83,18 +83,6 @@ services:
     networks:
       - tapp
 
-  consumer:
-    build:
-      context: consumer/
-      dockerfile: ./Dockerfile
-    image: consumer_instap
-    depends_on:
-      - broker
-      - zookeeper
-      - kafka-ui
-    container_name: consumer
-    networks:
-      - tapp
 
   logstash:
     build: 

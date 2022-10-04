@@ -62,17 +62,25 @@ def get_sentiment(text, daily_limit_passed = True):
 schema = tp.StructType([
     tp.StructField("id", tp.IntegerType(), False),
     tp.StructField("user", tp.StringType(), False),
-    tp.StructField("comments", tp.StringType(), False),
-    tp.StructField("caption", tp.StringType(), False)
+    tp.StructField("comment", tp.StringType(), False),
+    tp.StructField("caption", tp.StringType(), False),
+    tp.StructField("image", tp.StringType(), False),
+    tp.StructField("timestamp", tp.StringType(), False),
+    tp.StructField("lat", tp.FloatType(),False),
+    tp.StructField("lng", tp.FloatType(),False),
 ])
 
 es_mapping = {
     "mappings": {
         "properties": {
             "id":    {"type": "integer"},
-            "user":     {"type": "keyword"},
-            "comments":{"type":"keyword"},
-            "caption":{"type":"keyword"}   
+            "user":   {"type": "keyword"},
+            "comment":{"type":"keyword"},
+            "caption":{"type":"keyword"},
+            'image': {"type":"keyword"},
+            "timestamp": {"type": "date"},
+            "lat": {"type": "float"},
+            "lng": {"type": "float"},
         }
     }
 }
@@ -94,7 +102,7 @@ elastic_host = "http://elasticsearch:9200"
 es = Elasticsearch(hosts=elastic_host, verify_certs = False)
 
 
-response = es.indices.create(index="instap_index", mappings = es_mapping, ignore = 400)
+response = es.indices.create(index="instap_index2", mappings = es_mapping, ignore = 400)
 
 if 'acknowledged' in response:
     if response['acknowledged'] == True:
@@ -102,7 +110,7 @@ if 'acknowledged' in response:
 
 sentiment_udf = udf(get_sentiment, DoubleType())
 df=df.withColumn("sentiment_result", sentiment_udf(col("user")))
-df.writeStream.option("checkpointLocation", "./checkpoints").format("es").start("instap_index").awaitTermination()
+df.writeStream.option("checkpointLocation", "./checkpoints").format("es").start("instap_index2").awaitTermination()
 
 
 
