@@ -10,18 +10,18 @@ USER_TO_WATCH = os.getenv("USER_TO_WATCH", "chiaraferragni")
 LOGSTASH_URL = "http://logstash:9700"
 PROJEJCT_ID = 'instap_id'
 
-positive_comments = ["You're beautiful!!", "I love you!", "WOOOOW!", "Perfect!"]
+positive_comments = ["sei bellissima", "ti amo", "wow", "perfetta"]
 
-negative_comments = ["I hate you!", "I don't like this." , "too bad"]
+negative_comments = ["ti odio", "Ma a quanta gente DEMOCRATICA rode che la Borsa non ne voglia sapere di continuare a crollare? Povero Mario Monti sara' disperato"]
 
 i = 0
 while i < 1000000000:
-    rand_idx = random.randrange(3)
+    rand_idx = random.randrange(2)
     coin = random.randrange(2)
     data = {
         'id': i,
         'user': USER_TO_WATCH,
-        'comment': positive_comments[rand_idx] if coin %2 else negative_comments[rand_idx],
+        'comment': negative_comments[rand_idx],
         'caption': f'caption n° {str(i)}',
         'image': "https://images.newscientist.com/wp-content/uploads/2021/06/03141753/03-june_puppies.jpg",
         'timestamp': str(datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S")),
@@ -29,5 +29,5 @@ while i < 1000000000:
     }
     x = requests.post(LOGSTASH_URL, json=data, timeout=5)
     print(str(data))
-    sleep(5)
+    sleep(10)
     i += 1

@@ -19,15 +19,9 @@ from pyspark.ml.classification import NaiveBayes
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.sql import SparkSession
 from elasticsearch import Elasticsearch
-import pandas as pd
 from pyspark.sql.functions import udf
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from translate import Translator
 import time
 import json
-
-vader = SentimentIntensityAnalyzer()
-translator = Translator(from_lang = "it", to_lang="en")
 
 
 def get_spark_session():
@@ -39,33 +33,44 @@ def get_spark_session():
     spark_context.setLogLevel("WARN")
     spark_session = SparkSession(spark_context)
     return spark_session
-    
 
-def get_sentiment(text, daily_limit_passed = False):
-    if not daily_limit_passed:
-        print("traduco: ")
-        print(translator.translate(text))
-
-        value = vader.polarity_scores(translator.translate(text))
-        value = value['compound']
-
-        # 1) positive sentiment: compound score >= 0.05
-        # 2) neutral sentiment: (compound score > -0.05) and (compound score < 0.05)
-        # 3) negative sentiment: compound score <= -0.05
-        return value
-    else:
-        value = vader.polarity_scores(text)
-        value = value['compound']
-        return value
-
+#kafka message structure
 schema = tp.StructType([
+    tp.StructField("id", tp.IntegerType(), False),
     tp.StructField("user", tp.StringType(), False),
-    tp.StructField("caption", tp.StringType(), False)
+    tp.StructField("comment", tp.StringType(), False),
+    tp.StructField("caption", tp.StringType(), False),
+    tp.StructField("image", tp.StringType(), False),
+    tp.StructField("timestamp", tp.StringType(), False),
+    tp.StructField("lat", tp.FloatType(),False),
+    tp.StructField("lng", tp.FloatType(),False),
+])
+
+fields_to_visualize = ["id", "user", "comment", "caption", "image", "lat", "lng", "prediction"]
+
+training_set_schema = tp.StructType([
+    tp.StructField(name= 'id', dataType= tp.StringType(),  nullable= True),
+    tp.StructField(name= 'subjective',       dataType= tp.IntegerType(),  nullable= True),
+    tp.StructField(name= 'positive',       dataType= tp.IntegerType(),  nullable= True),
+    tp.StructField(name= 'negative',       dataType= tp.IntegerType(),  nullable= True),
+    tp.StructField(name= 'ironic',       dataType= tp.IntegerType(),  nullable= True),
+    tp.StructField(name= 'lpositive',       dataType= tp.IntegerType(),  nullable= True),
+    tp.StructField(name= 'lnegative',       dataType= tp.IntegerType(),  nullable= True),
+    tp.StructField(name= 'top',       dataType= tp.IntegerType(),  nullable= True),
+    tp.StructField(name= 'comment',       dataType= tp.StringType(),   nullable= True)
 ])
 
 es_mapping = {
-    "user":    {"type": "keyword"},
-    "caption":     {"type": "integer"}
+    "properties": {
+        "id":    {"type": "integer"},
+        "user":   {"type": "keyword"},
+        "comment":{"type":"keyword"},
+        "caption":{"type":"keyword"},
+        'image': {"type":"keyword"},
+        "timestamp": {"type": "date"},
+        "lat": {"type": "float"},
+        "lng": {"type": "float"},
+    }
 }
 
 topic = "instap"
@@ -77,16 +82,6 @@ df = spark.readStream.format('kafka') \
             option("startingOffsets","earliest").load()
             
 
-
-
-dict = {
-  "ciao": "Ford",
-  "ciau": "Mustang",
-  "year": 1964
-}
-#resp = es.index(index="nuovaholla", document=dict)
-#resp = es.indices.create(index="abdul", mappings = es_mapping, ignore = 400)
-
 df = df.selectExpr("CAST(value AS STRING)") \
 .select(from_json("value", schema=schema).alias("data")) \
 .select("data.*")
@@ -94,24 +89,75 @@ df = df.selectExpr("CAST(value AS STRING)") \
 elastic_host = "http://elasticsearch:9200"
 es = Elasticsearch(hosts=elastic_host, verify_certs = False)
 
-def elaborate(data_row):
-    es.index(index = "mytry", document = data_row.asDict())
-    print("1________________________________________")
-    print(data_row.show())
-    print("2________________________________________")
-    #print(batch_id)
-    print("3________________________________________")
-    if(data_row.count() > 0):
-        print("DATA RECEIVED FROM KAFKA")
+'''
+response = es.indices.create(index="instap_index5", mappings = es_mapping, ignore = 400)
+print(response)
+
+if 'acknowledged' in response:
+    if response['acknowledged'] == True:
+        print("Successfully created index:", response['index'])
+'''
+        
+training_set = spark.read.csv('../tap/spark/dataset/training_set_sentipolc16.csv',
+                         schema=training_set_schema,
+                         header=True,
+                         sep=',')
+# define stage 1: tokenize the tweet text    
+stage_1 = RegexTokenizer(inputCol= 'comment' , outputCol= 'tokens', pattern= '\\W')
+# define stage 2: remove the stop words
+stage_2 = StopWordsRemover(inputCol= 'tokens', outputCol= 'filtered_words')
+# define stage 3: create a word vector of the size 100
+stage_3 = Word2Vec(inputCol= 'filtered_words', outputCol= 'vector', vectorSize= 100)
+# define stage 4: Logistic Regression Model
+model = LogisticRegression(featuresCol= 'vector', labelCol= 'positive')
+# setup the pipeline
+pipeline = Pipeline(stages= [stage_1, stage_2, stage_3, model])
 
 
-print("ciao")
-#query  = df.writeStream.option("checkpointLocation", "./checkpoints").foreach(fun).start().awaitTermination()
+# fit the pipeline model with the training data
+pipelineFit = pipeline.fit(training_set)
 
-df.writeStream.option("checkpointLocation", "./checkpoints").format("es").start("mymytry").awaitTermination()
-#resp = es.index(index = "elastic_indexxxxxxxxxxxxxxxxxxxxxxx", document=dict)
+print(type(training_set))
+print(training_set)
 
-#df.writeStream.option("checkpointLocation", "./checkpoints").foreach(fun).start().awaitTermination()
+def elaborate(batch_df: DataFrame, batch_id: int):
+    batch_df.show(truncate=False)
+    if not batch_df.rdd.isEmpty():        
+        #pipelineFit: modello istruito
+        data = pipelineFit.transform(batch_df)
+        print("********************************************************************************************************")
+        print(data)
+        print("********************************************************************************************************")
+        clean_data = data.select(fields_to_visualize)
+        
+        for idx, row in enumerate(clean_data.collect()):
+            doc_to_write = row.asDict()
+            id = f'{batch_id}-{idx}'
+            resp = es.index(index = "instap_index5", id = id, document = doc_to_write)
+            print(resp)
+            
+##prof_method
+def alt_elaborate(data2: DataFrame):
+    print("******************************************************************************************************************************************************************************************************************************")
+    data2.show()
+    print("******************************************************************************************************************************************************************************************************************************")
+    data2.select(fields_to_visualize) \
+    .write \
+    .format("org.elasticsearch.spark.sql") \
+    .mode('overwrite') \
+    .option("es.mapping.id","id") \
+    .option("es.nodes", elastic_host).save("instap_index5")
+    
+    print("SAVED ******************************************************************************************************************************************************************************************************************************")
+
+df.writeStream \
+    .foreachBatch(elaborate) \
+    .start() \
+    .awaitTermination() #metodo prof
+    
+    
+
+
 
 
 
