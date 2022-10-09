@@ -76,7 +76,8 @@ services:
       dockerfile: ./Dockerfile
     image: producer_instap
     depends_on:
-      - logstash
+      logstash:
+        condition: service_healthy
     container_name: producer
     env_file:
       - ./producer/credentials.env
@@ -102,6 +103,11 @@ services:
       - kafka-ui
     networks:
       - tapp
+    healthcheck:
+      test: "curl -f logstash:9600"
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   elasticsearch:
     build:
