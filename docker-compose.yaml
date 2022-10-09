@@ -84,6 +84,21 @@ services:
     networks:
       - tapp
 
+  spark:
+    build:
+      context: spark
+    container_name: sparkcontainer
+    networks:
+      - tapp
+    depends_on:
+      producer:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 4g
+
 
   logstash:
     build: 
