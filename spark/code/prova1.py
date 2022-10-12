@@ -32,7 +32,7 @@ translator = Translator(from_lang = "it", to_lang="en")
 
 def get_spark_session():
     spark_conf = SparkConf()\
-        .set('es.nodes', 'elasticsearch_INSTAP')\
+        .set('es.nodes', 'elasticsearch')\
             .set('es.port', '9200')
     #spark_conf.set("es.index.auto.create", "true")
     spark_context = SparkContext(appName = 'insTAP', conf = spark_conf)

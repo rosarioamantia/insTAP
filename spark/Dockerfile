@@ -27,4 +27,4 @@ ADD code/*  /opt/tap/
 
 WORKDIR ${SPARK_DIR}
 
-ENTRYPOINT ["spark-submit", "--packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.1,org.elasticsearch:elasticsearch-spark-30_2.12:8.2.0", "--master", "local[*]", "../tap/prova_multi_index.py"]
+ENTRYPOINT ["spark-submit", "--packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.1,org.elasticsearch:elasticsearch-spark-30_2.12:8.2.0", "--master", "local[*]", "../tap/spark_application.py"]
