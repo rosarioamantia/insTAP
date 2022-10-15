@@ -25,7 +25,6 @@ def get_spark_session():
     spark_conf = SparkConf()\
         .set('es.nodes', 'elasticsearch')\
             .set('es.port', '9200')
-    #spark_conf.set("es.index.auto.create", "true")
     spark_context = SparkContext(appName = 'insTAP', conf = spark_conf)
     spark_context.setLogLevel("WARN")
     spark_session = SparkSession(spark_context)
@@ -77,18 +76,6 @@ es_mapping = {
     }
 }
 
-# Streaming Query - subscription to Kafka topic
-df = spark.readStream.format('kafka') \
-    .option('kafka.bootstrap.servers', kafkaServer) \
-        .option('subscribe', topic). \
-            option("startingOffsets","earliest").load()
-            
-df = df.selectExpr("CAST(value AS STRING)") \
-.select(from_json("value", schema=schema).alias("data")) \
-.select("data.*")
-
-es = Elasticsearch(hosts=elastic_host, verify_certs = False)
-        
 training_set = spark.read.csv('../tap/spark/dataset/training_set_sentipolc16.csv',
                          schema=training_set_schema,
                          header=True,
@@ -105,16 +92,25 @@ model = LogisticRegression(featuresCol= 'vector', labelCol= 'positive')
 pipeline = Pipeline(stages= [stage_1, stage_2, stage_3, model])
 
 
-# fit the pipeline model with the training data
+#trained model
 pipelineFit = pipeline.fit(training_set)
 
-print(type(training_set))
-print(training_set)
+#Create DataFrame representing the stream of input lines from Kafka
+df = spark.readStream.format('kafka') \
+    .option('kafka.bootstrap.servers', kafkaServer) \
+        .option('subscribe', topic). \
+            option("startingOffsets","earliest").load()
+            
+df = df.selectExpr("CAST(value AS STRING)") \
+.select(from_json("value", schema=schema).alias("data")) \
+.select("data.*")
 
-def elaborate(batch_df: DataFrame, batch_id: int):
+es = Elasticsearch(hosts=elastic_host, verify_certs = False)
+
+def process_batch(batch_df: DataFrame, batch_id: int):
     batch_df.show(truncate=False)
     if not batch_df.rdd.isEmpty():        
-        #pipelineFit: modello istruito
+        #trained model
         data = pipelineFit.transform(batch_df)
         print("********************************************************************************************************")
         print(data)
@@ -132,7 +128,7 @@ def elaborate(batch_df: DataFrame, batch_id: int):
                     print("Successfully created index:", resp['index'])
             
 ##prof_method
-def alt_elaborate(data2: DataFrame):
+def alt_process_batch(data2: DataFrame):
     print("******************************************************************************************************************************************************************************************************************************")
     data2.show()
     print("******************************************************************************************************************************************************************************************************************************")
@@ -146,7 +142,7 @@ def alt_elaborate(data2: DataFrame):
     print("SAVED ******************************************************************************************************************************************************************************************************************************")
 
 df.writeStream \
-    .foreachBatch(elaborate) \
+    .foreachBatch(process_batch) \
     .start() \
     .awaitTermination()
     
