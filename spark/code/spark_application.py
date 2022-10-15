@@ -110,14 +110,14 @@ es = Elasticsearch(hosts=elastic_host, verify_certs = False)
 def process_batch(batch_df: DataFrame, batch_id: int):
     batch_df.show(truncate=False)
     if not batch_df.rdd.isEmpty():        
-        #trained model
+        #pipelineFit = trained model
         data = pipelineFit.transform(batch_df)
         print("********************************************************************************************************")
         print(data)
         print("********************************************************************************************************")
-        clean_data = data.select(fields_to_visualize)
+        analyzed_data = data.select(fields_to_visualize)
         
-        for idx, row in enumerate(clean_data.collect()):
+        for idx, row in enumerate(analyzed_data.collect()):
             doc_to_write = row.asDict()
             id = f'{batch_id}-{idx}'
             resp = es.index(index = elastic_index, id = id, document = doc_to_write)
