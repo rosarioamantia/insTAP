@@ -39,20 +39,22 @@ elastic_host = "http://elasticsearch:9200"
 
 #kafka message structure
 schema = tp.StructType([
-    tp.StructField("id", tp.IntegerType(), False),
+    tp.StructField("message_id", tp.IntegerType(), False),
+    tp.StructField("post_id", tp.StringType(), False),
     tp.StructField("user", tp.StringType(), False),
     tp.StructField("comment", tp.StringType(), False),
     tp.StructField("caption", tp.StringType(), False),
     tp.StructField("image", tp.StringType(), False),
     tp.StructField("timestamp", tp.StringType(), False),
+    tp.StructField("likes", tp.IntegerType(), False),
     tp.StructField("lat", tp.FloatType(),False),
     tp.StructField("lng", tp.FloatType(),False),
 ])
 
-fields_to_visualize = ["id", "user", "comment", "caption", "image", "lat", "lng", "prediction"]
+fields_to_visualize = ["message_id", "post_id", "user", "comment", "caption", "image","likes", "lat", "lng", "prediction"]
 
 training_set_schema = tp.StructType([
-    tp.StructField(name= 'id', dataType= tp.StringType(),  nullable= True),
+    tp.StructField(name= 'message_id', dataType= tp.StringType(),  nullable= True),
     tp.StructField(name= 'subjective',       dataType= tp.IntegerType(),  nullable= True),
     tp.StructField(name= 'positive',       dataType= tp.IntegerType(),  nullable= True),
     tp.StructField(name= 'negative',       dataType= tp.IntegerType(),  nullable= True),
@@ -65,12 +67,14 @@ training_set_schema = tp.StructType([
 
 es_mapping = {
     "properties": {
-        "id":    {"type": "integer"},
+        "message_id":    {"type": "integer"},
+        "post_id":   {"type": "keyword"},
         "user":   {"type": "keyword"},
         "comment":{"type":"keyword"},
         "caption":{"type":"keyword"},
         'image': {"type":"keyword"},
         "timestamp": {"type": "date"},
+        "likes":  {"type": "integer"},
         "lat": {"type": "float"},
         "lng": {"type": "float"},
     }
