@@ -48,4 +48,4 @@ docker-compose up
 localhost:5601
 ```
 
-and import  visualizations located in ```kibana/export.ndjson``` to ```Left Hambugher menu > Management > Stack Management > Saved Objects > Import```.
+and import visualizations located in ```kibana/export.ndjson``` to ```Left Hambuger menu > Management > Stack Management > Saved Objects > Import```.
