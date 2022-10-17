@@ -35,7 +35,7 @@ More technical details in the specific folder, more details on the actual usage 
 git clone https://github.com/rosarioamantia/insTAP
 ```
 
-2. Move to producer folder and edit the credentials.env file with your Instagram user credentials.
+2. Move to producer folder and edit the producer.env file with your Instagram user credentials, users, number of posts and comments you want to see.
 
 3. In the root repository (called insTAP) run all the docker containers:
 
