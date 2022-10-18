@@ -13,13 +13,18 @@ RUN pip3 install pyspark numpy 'elasticsearch==8.2.0' vaderSentiment translate k
 # Create Sym Link 
 RUN ln -s /opt/spark-${SPARK_VERSION}-bin-hadoop2.7 ${SPARK_DIR} 
 
+# Add dataset
 ADD dataset /opt/tap/spark/dataset
+
 # Add Python Code
 ADD code/*  /opt/tap/
+
 # Add Java Code
 #ADD apps /opt/tap/apps
+
 # Add Spark Manager
-ADD spark-manager.sh $SPARK_DIR/bin/spark-manager
+#ADD spark-manager.sh $SPARK_DIR/bin/spark-manager
 
 WORKDIR ${SPARK_DIR}
-ENTRYPOINT [ "spark-manager" ]
+
+ENTRYPOINT ["spark-submit", "--packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.1,org.elasticsearch:elasticsearch-spark-30_2.12:8.2.0", "--master", "local[*]", "../tap/spark_application.py"]

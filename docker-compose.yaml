@@ -10,27 +10,25 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     networks:
-      - tapp
-
+      - instap_net
 
   broker:
     image: confluentinc/cp-kafka:6.1.1
     container_name: broker
     hostname: broker
     ports:
-      - "9092:9092"
+      - ${BROKER_PORT}:${BROKER_PORT}
     depends_on:
       - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:${BROKER_PORT}
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
     networks:
-      - tapp
-
+      - instap_net
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -39,15 +37,14 @@ services:
       - zookeeper
       - broker
     ports:
-      - "8080:8080"
+      - ${KAFKA_UI_PORT}:${KAFKA_UI_PORT}
     restart: always
     environment:
       KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker:9092
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker:${BROKER_PORT}
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
     networks:
-      - tapp
-
+      - instap_net
 
   init-kafka:
     image: confluentinc/cp-kafka:6.1.1
@@ -68,54 +65,74 @@ services:
       kafka-topics --bootstrap-server broker:29092 --list
       "
     networks:
-      - tapp
+      - instap_net
 
   producer:
     build:
       context: producer/
       dockerfile: ./Dockerfile
-    image: producer_instap
+    image: instap_producer
     depends_on:
-      - logstash
+      logstash:
+        condition: service_healthy
     container_name: producer
     env_file:
-      - ./producer/credentials.env
+      - ./producer/producer.env
     networks:
-      - tapp
+      - instap_net
 
+  spark:
+    build:
+      context: spark
+    container_name: spark
+    networks:
+      - instap_net
+    depends_on:
+      producer:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 4g
 
   logstash:
     build: 
       context: logstash/
       dockerfile: ./Dockerfile
-    image: logstash_instap
+    image: instap_logstash
     container_name: logstash
     ports:
-      - "9600:9600"
-      - "9700:9700"
+      - ${LOGSTASH_PORT}:${LOGSTASH_PORT}
+      - ${LOGSTASH_INPUT_PORT}:${LOGSTASH_INPUT_PORT}
     expose:
-      - "9600"
-      - "9700"
+      - "${LOGSTASH_PORT}"
+      - "${LOGSTASH_INPUT_PORT}"
     depends_on: 
       - broker
       - zookeeper
       - kafka-ui
     networks:
-      - tapp
+      - instap_net
+    healthcheck:
+      test: "curl -f logstash:${LOGSTASH_PORT}"
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   elasticsearch:
+    container_name: elasticsearch
     build:
       context: ./elasticsearch
       dockerfile: Dockerfile
-    image: instap:elasticsearch_INSTAP
+    image: instap_elasticsearch
     networks:
-      tapp:
+      instap_net:
         ipv4_address: 10.0.100.51
-
-    container_name: elasticsearch_INSTAP
     ports:
-        - "9200:9200"
+        - ${ES_PORT}:${ES_PORT}
     environment:
+      cluster.name: ${CLUSTER_NAME}
       node.name: elasticsearch
       discovery.type: single-node
       ES_JAVA_OPTS: -Xms2g -Xmx2g
@@ -127,25 +144,28 @@ services:
     build:
       context: ./kibana
       dockerfile: Dockerfile
-    image: instap:kibana
+    image: instap_kibana
     container_name: kibana
     hostname: kibana
     ports:
-      - 5601:5601
+      - ${KIBANA_PORT}:${KIBANA_PORT}
     networks:
-      tapp:
+      instap_net:
         ipv4_address: 10.0.100.52
     environment:
         xpack.security.enabled: "false"
     depends_on:
       - elasticsearch
+    volumes:
+      - kibanadata:/usr/share/kibana/data
 
 volumes:
-    myapp:
+  kibanadata:
+    driver: local
 
 networks: 
-  tapp:
-    name: tapp
+  instap_net:
+    name: tap
     driver: bridge
     ipam:
         config:
