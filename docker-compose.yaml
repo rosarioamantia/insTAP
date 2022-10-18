@@ -77,7 +77,7 @@ services:
         condition: service_healthy
     container_name: producer
     env_file:
-      - ./producer/credentials.env
+      - ./producer/producer.env
     networks:
       - instap_net
 
@@ -103,11 +103,11 @@ services:
     image: instap_logstash
     container_name: logstash
     ports:
-      - "9600:9600"
-      - "9700:9700"
+      - ${LOGSTASH_PORT}:${LOGSTASH_PORT}
+      - ${LOGSTASH_INPUT_PORT}:${LOGSTASH_INPUT_PORT}
     expose:
-      - "9600"
-      - "9700"
+      - "${LOGSTASH_PORT}"
+      - "${LOGSTASH_INPUT_PORT}"
     depends_on: 
       - broker
       - zookeeper
@@ -115,7 +115,7 @@ services:
     networks:
       - instap_net
     healthcheck:
-      test: "curl -f logstash:9600"
+      test: "curl -f logstash:${LOGSTASH_PORT}"
       interval: 5s
       timeout: 5s
       retries: 20

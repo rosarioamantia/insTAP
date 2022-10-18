@@ -7,7 +7,7 @@ The purpose of the project is to carry out a sentiment analysis on the comments 
 
 ## Data Pipeline 
 
-<p align="center"><img src="./doc/images/data_pipeline.png" alt="Data Pipeline" width="1000"/></p>
+<p align="center"><img src="./doc/images/tap_flow.png" alt="Data Pipeline" width="1000"/></p>
 
 The components of the pipeline are listed below:
 
@@ -15,7 +15,7 @@ The components of the pipeline are listed below:
 
 - **[Logstash](https://www.elastic.co/logstash)**: receives the data from the producer and writes on Kafka's Instap topic.
 - **[Kafka](https://kafka.apache.org/)**: message broker, connects logstash to the Spark processing component.
-- **[Spark](https://spark.apache.org/)**: <to be written>
+- **[Spark](https://spark.apache.org/)**: received data from Kafka and perform machine learning prediction
 - **[Elasticsearch](https://www.elastic.co/)**: Indexing incoming data.
 - **[Kibana](https://www.elastic.co/kibana)**: UI dedicated to Data Visualization.
 
@@ -35,7 +35,7 @@ More technical details in the specific folder, more details on the actual usage 
 git clone https://github.com/rosarioamantia/insTAP
 ```
 
-2. Move to producer folder and edit the credentials.env file with your Instagram user credentials.
+2. Move to producer folder and edit the producer.env file with your Instagram user credentials, users, number of posts and comments you want to see.
 
 3. In the root repository (called insTAP) run all the docker containers:
 
