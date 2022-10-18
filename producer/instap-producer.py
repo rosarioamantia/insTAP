@@ -6,11 +6,11 @@ import requests
 
 import instaloader
 
-POSTS_LIMIT = os.getenv("POSTS_LIMIT", 10)
-COMMENTS_LIMIT = os.getenv("COMMENTS_LIMIT", 20)
+POSTS_LIMIT = int(os.getenv("POSTS_LIMIT", '10'))
+COMMENTS_LIMIT = int(os.getenv("COMMENTS_LIMIT", '20'))
 USER_TEST = os.getenv("USER_TEST", "<user_here>")
 PASS_TEST = os.getenv("PASS_TEST", "<pass_here>")
-USER_TO_WATCH = os.getenv("USER_TO_WATCH", ["frank_gramuglia", "chiaraferragni" ])
+USER_TO_WATCH = os.getenv("USER_TO_WATCH", "matteorenzi, giorgiameloni").split(",")
 LOGSTASH_URL = "http://logstash:9700"
 PROJEJCT_ID = 'instap_id'
 
@@ -41,5 +41,5 @@ for user in USER_TO_WATCH:
                 'lng': post.location.lng if post.location else None
             }
             print(str(data))
-            sleep(5)
+            sleep(1)
             x = requests.post(LOGSTASH_URL, json=data, timeout=5)
