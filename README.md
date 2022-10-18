@@ -37,13 +37,15 @@ git clone https://github.com/rosarioamantia/insTAP
 
 2. Move to producer folder and edit the producer.env file with your Instagram user credentials, users, number of posts and comments you want to see.
 
-3. In the root repository (called insTAP) run all the docker containers:
+3. Download spark-3.1.1-bin-hadoop2.7 in spark/setup folder.
+
+4. In the root repository (called insTAP) run all the docker containers:
 
 ```
 docker-compose up
 ```
-4. Now, the producer will generate data.
-5. Go to:
+5. Now, the producer will generate data.
+6. Go to:
 ```
 localhost:5601
 ```
