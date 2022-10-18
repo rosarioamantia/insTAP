@@ -51,7 +51,7 @@ schema = tp.StructType([
     tp.StructField("lng", tp.FloatType(),False),
 ])
 
-fields_to_visualize = ["message_id", "post_id", "user", "comment", "caption", "image","likes", "lat", "lng", "prediction"]
+fields_to_show = ["message_id", "post_id", "user", "comment", "caption", "image","likes", "lat", "lng", "prediction"]
 
 training_set_schema = tp.StructType([
     tp.StructField(name= 'message_id', dataType= tp.StringType(),  nullable= True),
@@ -114,12 +114,11 @@ es = Elasticsearch(hosts=elastic_host, verify_certs = False)
 def process_batch(batch_df: DataFrame, batch_id: int):
     batch_df.show(truncate=False)
     if not batch_df.rdd.isEmpty():        
+        
         #pipelineFit = trained model
         data = pipelineFit.transform(batch_df)
-        print("********************************************************************************************************")
         print(data)
-        print("********************************************************************************************************")
-        analyzed_data = data.select(fields_to_visualize)
+        analyzed_data = data.select(fields_to_show)
         
         for idx, row in enumerate(analyzed_data.collect()):
             doc_to_write = row.asDict()
@@ -129,21 +128,16 @@ def process_batch(batch_df: DataFrame, batch_id: int):
             
             if 'acknowledged' in resp:
                 if resp['acknowledged'] == True:
-                    print("Successfully created index:", resp['index'])
+                    print("Successfully created index: ", resp['index'])
             
-##prof_method
 def alt_process_batch(data2: DataFrame):
-    print("******************************************************************************************************************************************************************************************************************************")
     data2.show()
-    print("******************************************************************************************************************************************************************************************************************************")
-    data2.select(fields_to_visualize) \
+    data2.select(fields_to_show) \
     .write \
     .format("org.elasticsearch.spark.sql") \
     .mode('overwrite') \
     .option("es.mapping.id","id") \
     .option("es.nodes", elastic_host).save(elastic_index)
-    
-    print("SAVED ******************************************************************************************************************************************************************************************************************************")
 
 df.writeStream \
     .foreachBatch(process_batch) \
