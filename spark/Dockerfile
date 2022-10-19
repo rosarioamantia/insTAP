@@ -1,6 +1,6 @@
 FROM openjdk:8-jre
 
-ENV SPARK_VERSION=3.1.1
+ENV SPARK_VERSION=3.1.2
 ENV SPARK_DIR=/opt/spark
 ENV PATH $SPARK_DIR/bin:$PATH
 
@@ -27,4 +27,4 @@ ADD code/*  /opt/tap/
 
 WORKDIR ${SPARK_DIR}
 
-ENTRYPOINT ["spark-submit", "--packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.1,org.elasticsearch:elasticsearch-spark-30_2.12:8.2.0", "--master", "local[*]", "../tap/spark_application.py"]
+ENTRYPOINT ["spark-submit", "--packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2,org.elasticsearch:elasticsearch-spark-30_2.12:8.2.0", "--master", "local[*]", "../tap/spark_application.py"]
