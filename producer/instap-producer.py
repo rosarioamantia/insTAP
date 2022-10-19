@@ -8,15 +8,13 @@ import instaloader
 
 POSTS_LIMIT = int(os.getenv("POSTS_LIMIT", '10'))
 COMMENTS_LIMIT = int(os.getenv("COMMENTS_LIMIT", '20'))
-USER_TEST = os.getenv("USER_TEST", "<user_here>")
-PASS_TEST = os.getenv("PASS_TEST", "<pass_here>")
+INSTA_USER = os.getenv("INSTA_USER", "<user_here>")
+INSTA_PASS = os.getenv("INSTA_PASS", "<pass_here>")
 USERS_TO_WATCH = os.getenv("USERS_TO_WATCH", "matteorenzi,giorgiameloni").split(",")
 LOGSTASH_URL = "http://logstash:9700"
-PROJEJCT_ID = 'instap_id'
-
 
 insta = instaloader.Instaloader()
-insta.login(USER_TEST, PASS_TEST)
+insta.login(INSTA_USER, INSTA_PASS)
 for user in USERS_TO_WATCH:
     posts = instaloader.Profile.from_username(insta.context, user).get_posts()
 
